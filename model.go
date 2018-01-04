@@ -1,35 +1,50 @@
 package main
 
+// https://semaphoreci.com/community/tutorials/building-and-testing-a-rest-api-in-go-with-gorilla-mux-and-postgresql
+
 import (
-	"net/http"
+  "net/http"
 	"encoding/json"
 	"io/ioutil"
   "sync"
 )
 
-const APIBaseURL = "https://api.giphy.com"
+const APIBaseURL = "https://api.giphy.com/v1/gifs"
 const APIKey = "y982M4dvoKqweMEoRbPbWMqz2agb1BcW"
 
-type Meme struct {
-	Id		string
-	Url		string		`json:"image_mp4_url"`
+type GiphyResponse struct {
+  Data Gif `json:"data"`
+  Meta struct {
+    Msg             string
+    ResponseID      string
+    Status          int
+  }
 }
 
-func (m *Meme) getMeme(id string) error {
+type Gif struct {
+  ID                string    `json:"id"`
+  Type              string    `json:"type"`
+  URL               string    `json:"url"`
+  ImageOriginalURL  string    `json:"image_original_url"`
+  ImageMp4Url       string    `json:"image_mp4_url"`
+  ImageUrl          string    `json:"image_url"`
+  ImageWidth        string    `json:"image_width"`
+  ImageHeight       string    `json:"image_height"`
+}
+
+func (m *Gif) getMeme(id string) error {
+  /*
   g, err := giphyRequest("/" + id)
 
   if (err != nil) {
     return err
   }
-
-  m.Id = g.Data.Id
-  m.Url = g.Data.Url
-
+  */
   return nil
 }
 
-func getRandomMemes(count int) ([]Meme, error) {
-	var m []Meme
+func getRandomMemes(count int) ([]Gif, error) {
+	var g []Gif
 	var wg sync.WaitGroup
 
 	i := 0
@@ -42,7 +57,7 @@ func getRandomMemes(count int) ([]Meme, error) {
 			resp, err := getRandomMeme()
 
 			if err == nil {
-				m = append(m, resp)
+				g = append(g, resp)
 			}
 		}()
 		i++
@@ -50,34 +65,28 @@ func getRandomMemes(count int) ([]Meme, error) {
 
 	wg.Wait()
 
-	return m, nil
+	return g, nil
 }
 
-type Gif struct {
-	Data Meme
-}
+func getRandomMeme() (Gif, error) {
+  var g GiphyResponse
 
-func getRandomMeme() (Meme, error) {
-	var m Meme
-
-	g, err := giphyRequest("random")
+	g, err := giphyRequest("/random")
 
 	if err != nil {
-		return m, err
-	}
+		return g.Data, err
+  }
 
 	if err != nil {
-		return m, err
+		return g.Data, err
 	}
 
-	m = g.Data
-
-	return m, nil
+	return g.Data, nil
 }
 
-func giphyRequest(path string) (Gif, error) {
-  var g Gif
-  url := APIBaseURL + "/v1/gifs" + path + "?api_key=" + APIKey
+func giphyRequest(path string) (GiphyResponse, error) {
+  var g GiphyResponse
+  url := APIBaseURL + path + "?api_key=" + APIKey
   resp, err := http.Get(url)
 
 	if err != nil {
